@@ -154,7 +154,18 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
     }
     
     public func dismissMe(completion: (() -> Void)? = nil) {
+        
+        guard let collectionView = self.initialSourceView?
+                .parentView(of: UICollectionView.self)
+        else {
+            return
+        }
+        
+        let rowIndex = self.indexOffset + self.currentIndex
+        let indexPath = IndexPath(row: rowIndex, section: 0)
+        let sourceView = collectionView.cellForItem(at: indexPath)?.contentView
         sourceView?.alpha = 1.0
+        
         UIView.animate(withDuration: 0.235, animations: {
             self.view.alpha = 0.0
         }) { _ in
