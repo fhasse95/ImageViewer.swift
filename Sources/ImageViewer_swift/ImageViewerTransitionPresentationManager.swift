@@ -64,7 +64,7 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
         -> UIImageView {
             let dummyImageView:UIImageView = UIImageView(frame: frame)
             dummyImageView.clipsToBounds = true
-            dummyImageView.contentMode = .scaleAspectFill
+            dummyImageView.contentMode = .scaleAspectFit
             dummyImageView.alpha = 1.0
             dummyImageView.image = image
             return dummyImageView
@@ -77,10 +77,18 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
         completed: @escaping((Bool) -> Void)) {
 
         guard
-            let transitionVC = controller as? ImageViewerTransitionViewControllerConvertible,
-            let sourceView = transitionVC.sourceView
+            let transitionVC = controller as? ImageCarouselViewController,
+            let collectionView = transitionVC.initialSourceView?
+                .parentView(of: UICollectionView.self)
         else { return }
-    
+        
+        let rowIndex = transitionVC.indexOffset + transitionVC.currentIndex
+        let indexPath = IndexPath(row: rowIndex, section: 0)
+        let sourceView = collectionView.cellForItem(at: indexPath)?.contentView
+        guard let sourceView = sourceView else {
+            return
+        }
+        
         sourceView.alpha = 0.0
         controller.view.alpha = 0.0
         
@@ -89,8 +97,8 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
         
         let dummyImageView = createDummyImageView(
             frame: sourceView.frameRelativeToWindow(),
-            image: sourceView.image)
-        dummyImageView.contentMode = .scaleAspectFit
+            image: transitionVC.sourceView?.image)
+        dummyImageView.layer.cornerRadius = sourceView.layer.cornerRadius
         transitionView.addSubview(dummyImageView)
         
         UIView.animate(withDuration: duration, animations: {
@@ -109,11 +117,17 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
         duration:TimeInterval,
         completed: @escaping((Bool) -> Void)) {
         
-        guard
-            let transitionVC = controller as? ImageViewerTransitionViewControllerConvertible
-        else { return }
-  
-        let sourceView = transitionVC.sourceView
+        guard let transitionVC = controller
+                as? ImageCarouselViewController,
+              let collectionView = transitionVC.initialSourceView?
+                .parentView(of: UICollectionView.self)
+        else {
+            return
+        }
+        
+        let rowIndex = transitionVC.indexOffset + transitionVC.currentIndex
+        let indexPath = IndexPath(row: rowIndex, section: 0)
+        let sourceView = collectionView.cellForItem(at: indexPath)?.contentView
         let targetView = transitionVC.targetView
         
         let dummyImageView = createDummyImageView(
@@ -121,15 +135,12 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
             image: targetView?.image)
         transitionView.addSubview(dummyImageView)
         targetView?.isHidden = true
-      
+        
         controller.view.alpha = 1.0
         UIView.animate(withDuration: duration, animations: {
+            dummyImageView.layer.cornerRadius = sourceView?.layer.cornerRadius ?? 0
             if let sourceView = sourceView {
-                // return to original position
                 dummyImageView.frame = sourceView.frameRelativeToWindow()
-            } else {
-                // just disappear
-                dummyImageView.alpha = 0.0
             }
             controller.view.alpha = 0.0
         }) { finished in
@@ -202,5 +213,22 @@ extension ImageViewerTransitionPresentationManager: UIAdaptivePresentationContro
         viewControllerForAdaptivePresentationStyle style: UIModalPresentationStyle
     ) -> UIViewController? {
         return nil
+    }
+}
+
+// MARK: - UIView Extension
+extension UIView {
+    
+    /// Returns the parent view of the specified type.
+    ///
+    /// - Parameter type: The type of the parent view.
+    /// - Returns: The parent view of the specified type.
+    func parentView<T: UIView>(of type: T.Type) -> T? {
+        guard let view = self.superview
+        else {
+            return nil
+        }
+        
+        return (view as? T) ?? view.parentView(of: T.self)
     }
 }

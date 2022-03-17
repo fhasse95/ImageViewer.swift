@@ -1,11 +1,13 @@
 import UIKit
+#if canImport(SDWebImage)
+import SDWebImage
+#endif
 
 class ImageViewerController:UIViewController,
 UIGestureRecognizerDelegate {
     
     var imageView: UIImageView = UIImageView(frame: .zero)
-    let imageLoader: ImageLoader
-    
+
     var backgroundView:UIView? {
         guard let _parent = parent as? ImageCarouselViewController
             else { return nil}
@@ -35,12 +37,10 @@ UIGestureRecognizerDelegate {
     
     init(
         index: Int,
-        imageItem:ImageItem,
-        imageLoader: ImageLoader) {
-
+        imageItem:ImageItem) {
+        
         self.index = index
         self.imageItem = imageItem
-        self.imageLoader = imageLoader
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -88,12 +88,18 @@ UIGestureRecognizerDelegate {
         case .image(let img):
             imageView.image = img
             imageView.layoutIfNeeded()
+            #if canImport(SDWebImage)
         case .url(let url, let placeholder):
-            imageLoader.loadImage(url, placeholder: placeholder, imageView: imageView) { (image) in
-                DispatchQueue.main.async {[weak self] in
-                    self?.layout()
-                }
+            imageView.sd_setImage(
+                with: url,
+                placeholderImage: placeholder,
+                options: [],
+                progress: nil) {(img, err, type, url) in
+                    DispatchQueue.main.async {[weak self] in
+                        self?.layout()
+                    }
             }
+            #endif
         default:
             break
         }
@@ -104,11 +110,6 @@ UIGestureRecognizerDelegate {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         self.navBar?.alpha = 1.0
-    }
-    
-    override func viewDidDisappear(_ animated: Bool) {
-        super.viewDidDisappear(animated)
-        self.navBar?.alpha = 0.0
     }
     
     override func viewWillLayoutSubviews() {
@@ -187,6 +188,10 @@ UIGestureRecognizerDelegate {
         var newZoomScale = scrollView.zoomScale / 1.5
         newZoomScale = max(newZoomScale, scrollView.minimumZoomScale)
         scrollView.setZoomScale(newZoomScale, animated: true)
+        
+        UIView.animate(withDuration: 0.235) {
+            self.navBar?.alpha = 0
+        }
     }
     
     @objc
@@ -202,6 +207,10 @@ UIGestureRecognizerDelegate {
     func didDoubleTap(_ recognizer:UITapGestureRecognizer) {
         let pointInView = recognizer.location(in: imageView)
         zoomInOrOut(at: pointInView)
+        
+        UIView.animate(withDuration: 0.235) {
+            self.navBar?.alpha = 0
+        }
     }
     
     func gestureRecognizerShouldBegin(

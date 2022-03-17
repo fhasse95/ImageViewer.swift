@@ -5,7 +5,7 @@ public protocol ImageDataSource:class {
     func imageItem(at index:Int) -> ImageItem
 }
 
-public class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionViewControllerConvertible {
+class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionViewControllerConvertible {
     
     unowned var initialSourceView: UIImageView?
     var sourceView: UIImageView? {
@@ -23,16 +23,10 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
     }
     
     weak var imageDatasource:ImageDataSource?
-    let imageLoader:ImageLoader
  
     var initialIndex = 0
-    
-    var theme:ImageViewerTheme = .light {
-        didSet {
-            navItem.leftBarButtonItem?.tintColor = theme.tintColor
-            backgroundView?.backgroundColor = theme.color
-        }
-    }
+    var currentIndex = 0
+    var indexOffset = 0
     
     var options:[ImageViewerOption] = []
     
@@ -41,14 +35,17 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
     private(set) lazy var navBar:UINavigationBar = {
         let _navBar = UINavigationBar(frame: .zero)
         _navBar.isTranslucent = true
-        _navBar.setBackgroundImage(UIImage(), for: .default)
-        _navBar.shadowImage = UIImage()
+        _navBar.delegate = self
         return _navBar
     }()
     
     private(set) lazy var backgroundView:UIView? = {
         let _v = UIView()
-        _v.backgroundColor = theme.color
+        if #available(iOS 13.0, *) {
+            _v.backgroundColor = .systemBackground
+        } else {
+            _v.backgroundColor = .white
+        }
         _v.alpha = 1.0
         return _v
     }()
@@ -60,15 +57,14 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
     public init(
         sourceView:UIImageView,
         imageDataSource: ImageDataSource?,
-        imageLoader: ImageLoader,
         options:[ImageViewerOption] = [],
         initialIndex:Int = 0) {
         
         self.initialSourceView = sourceView
         self.initialIndex = initialIndex
+        self.currentIndex = initialIndex
         self.options = options
         self.imageDatasource = imageDataSource
-        self.imageLoader = imageLoader
         let pageOptions = [UIPageViewController.OptionsKey.interPageSpacing: 20]
         super.init(
             transitionStyle: .scroll,
@@ -86,14 +82,16 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
     
     private func addNavBar() {
         // Add Navigation Bar
-        let closeBarButton = UIBarButtonItem(
-            title: NSLocalizedString("Close", comment: "Close button title"),
-            style: .plain,
-            target: self,
-            action: #selector(dismiss(_:)))
+        if #available(iOS 13.0, *) {
+            let closeBarButton = UIBarButtonItem(
+                barButtonSystemItem: .cancel,
+                target: self,
+                action: #selector(dismiss(_:)))
+            navItem.leftBarButtonItem = closeBarButton
+        } else {
+            // Fallback on earlier versions
+        }
         
-        navItem.leftBarButtonItem = closeBarButton
-        navItem.leftBarButtonItem?.tintColor = theme.tintColor
         navBar.alpha = 0.0
         navBar.items = [navItem]
         navBar.insert(to: view)
@@ -110,24 +108,24 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         
         options.forEach {
             switch $0 {
-                case .theme(let theme):
-                    self.theme = theme
-                case .closeIcon(let icon):
-                    navItem.leftBarButtonItem?.image = icon
-                case .rightNavItemTitle(let title, let onTap):
-                    navItem.rightBarButtonItem = UIBarButtonItem(
-                        title: title,
-                        style: .plain,
-                        target: self,
-                        action: #selector(diTapRightNavBarItem(_:)))
-                    onRightNavBarTapped = onTap
-                case .rightNavItemIcon(let icon, let onTap):
-                    navItem.rightBarButtonItem = UIBarButtonItem(
-                        image: icon,
-                        style: .plain,
-                        target: self,
-                        action: #selector(diTapRightNavBarItem(_:)))
-                    onRightNavBarTapped = onTap
+            case .closeIcon(let icon):
+                navItem.leftBarButtonItem?.image = icon
+            case .rightNavItemTitle(let title, let onTap):
+                navItem.rightBarButtonItem = UIBarButtonItem(
+                    title: title,
+                    style: .plain,
+                    target: self,
+                    action: #selector(diTapRightNavBarItem(_:)))
+                onRightNavBarTapped = onTap
+            case .rightNavItemIcon(let icon, let onTap):
+                navItem.rightBarButtonItem = UIBarButtonItem(
+                    image: icon,
+                    style: .plain,
+                    target: self,
+                    action: #selector(diTapRightNavBarItem(_:)))
+                onRightNavBarTapped = onTap
+            case .indexOffset(let indexOffset):
+                self.indexOffset = indexOffset
             }
         }
     }
@@ -140,12 +138,12 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         applyOptions()
         
         dataSource = self
+        delegate = self
 
         if let imageDatasource = imageDatasource {
             let initialVC:ImageViewerController = .init(
                 index: initialIndex,
-                imageItem: imageDatasource.imageItem(at: initialIndex),
-                imageLoader: imageLoader)
+                imageItem: imageDatasource.imageItem(at: initialIndex))
             setViewControllers([initialVC], direction: .forward, animated: true)
         }
     }
@@ -175,13 +173,6 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
             else { return }
         onTap(_firstVC.index)
     }
-    
-    override public var preferredStatusBarStyle: UIStatusBarStyle {
-        if theme == .dark {
-            return .lightContent
-        }
-        return .default
-    }
 }
 
 extension ImageCarouselViewController:UIPageViewControllerDataSource {
@@ -196,8 +187,7 @@ extension ImageCarouselViewController:UIPageViewControllerDataSource {
         let newIndex = vc.index - 1
         return ImageViewerController.init(
             index: newIndex,
-            imageItem:  imageDatasource.imageItem(at: newIndex),
-            imageLoader: vc.imageLoader)
+            imageItem:  imageDatasource.imageItem(at: newIndex))
     }
     
     public func pageViewController(
@@ -211,7 +201,59 @@ extension ImageCarouselViewController:UIPageViewControllerDataSource {
         let newIndex = vc.index + 1
         return ImageViewerController.init(
             index: newIndex,
-            imageItem: imageDatasource.imageItem(at: newIndex),
-            imageLoader: vc.imageLoader)
+            imageItem: imageDatasource.imageItem(at: newIndex))
+    }
+}
+
+extension ImageCarouselViewController: UIPageViewControllerDelegate {
+    
+    public func pageViewController(
+        _ pageViewController: UIPageViewController,
+        didFinishAnimating finished: Bool,
+        previousViewControllers: [UIViewController],
+        transitionCompleted completed: Bool) {
+        
+        guard completed,
+              let vc = pageViewController.viewControllers?.first
+                as? ImageViewerController,
+              let collectionView = self.initialSourceView?
+                .parentView(of: UICollectionView.self)
+        else {
+            return
+        }
+        
+        // Show all other collection view cells
+        // (used for the dismiss animation).
+        let numberOfRows = collectionView.numberOfItems(inSection: 0)
+        for rowIndex in 0..<numberOfRows {
+            let indexPath = IndexPath(row: rowIndex, section: 0)
+            let collectionViewCell = collectionView.cellForItem(
+                at: indexPath)?.contentView
+            collectionViewCell?.alpha = 1
+        }
+        
+        // Update the current index.
+        self.currentIndex = vc.index
+        
+        // Scroll the parent collection view to the current item.
+        let rowIndex = self.indexOffset + self.currentIndex
+        let indexPath = IndexPath(row: rowIndex, section: 0)
+        collectionView.scrollToItem(
+            at: indexPath,
+            at: .left,
+            animated: false)
+        
+        // Hide the currently displayed collection view cell
+        // (used for the dismiss animation).
+        let collectionViewCell = collectionView.cellForItem(
+            at: indexPath)?.contentView
+        collectionViewCell?.alpha = 0
+    }
+}
+
+extension ImageCarouselViewController: UINavigationBarDelegate {
+    
+    func position(for bar: UIBarPositioning) -> UIBarPosition {
+        return .topAttached
     }
 }
