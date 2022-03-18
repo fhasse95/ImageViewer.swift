@@ -67,6 +67,7 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
             dummyImageView.contentMode = .scaleAspectFit
             dummyImageView.alpha = 1.0
             dummyImageView.image = image
+            dummyImageView.layer.masksToBounds = true
             return dummyImageView
     }
     
@@ -105,8 +106,8 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
             dummyImageView.frame = UIScreen.main.bounds
             controller.view.alpha = 1.0
         }) { finished in
-            transitionVC.targetView?.alpha = 1.0
             dummyImageView.removeFromSuperview()
+            transitionVC.targetView?.alpha = 1.0
             completed(finished)
         }
     }

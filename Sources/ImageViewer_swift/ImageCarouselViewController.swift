@@ -23,20 +23,43 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
     }
     
     weak var imageDatasource:ImageDataSource?
- 
+    
     var initialIndex = 0
-    var currentIndex = 0
+    var currentIndex = 0 {
+        didSet {
+            self.pageControl.currentPage = self.currentIndex
+        }
+    }
     var indexOffset = 0
     
     var options:[ImageViewerOption] = []
     
     private var onRightNavBarTapped:((Int) -> Void)?
     
-    private(set) lazy var navBar:UINavigationBar = {
+    private(set) lazy var navBar: UINavigationBar = {
         let _navBar = UINavigationBar(frame: .zero)
         _navBar.isTranslucent = true
         _navBar.delegate = self
         return _navBar
+    }()
+    
+    private(set) lazy var toolBar: UIToolbar = {
+        let _toolBar = UIToolbar(frame: .zero)
+        _toolBar.isTranslucent = true
+        return _toolBar
+    }()
+    
+    private(set) lazy var pageControl: UIPageControl = {
+        let _pageControl = UIPageControl(frame: .zero)
+        if #available(iOS 14.0, *) {
+            _pageControl.allowsContinuousInteraction = false
+        }
+        
+        if #available(iOS 13.0, *) {
+            _pageControl.pageIndicatorTintColor = .systemFill
+            _pageControl.currentPageIndicatorTintColor = .secondaryLabel
+        }
+        return _pageControl
     }()
     
     private(set) lazy var backgroundView:UIView? = {
@@ -88,13 +111,47 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
                 target: self,
                 action: #selector(dismiss(_:)))
             navItem.leftBarButtonItem = closeBarButton
-        } else {
-            // Fallback on earlier versions
         }
         
-        navBar.alpha = 0.0
         navBar.items = [navItem]
         navBar.insert(to: view)
+    }
+    
+    private func addToolBar() {
+        pageControl.numberOfPages = self.imageDatasource?.numberOfImages() ?? 0
+        pageControl.currentPage = self.currentIndex
+        toolBar.addSubview(pageControl)
+        
+        // Update constraints.
+        pageControl.translatesAutoresizingMaskIntoConstraints = false
+        pageControl.heightAnchor.constraint(equalToConstant: 35)
+            .isActive = true
+        pageControl.topAnchor.constraint(
+            equalTo: self.toolBar.topAnchor)
+            .isActive = true
+        pageControl.bottomAnchor.constraint(
+            equalTo: self.toolBar.bottomAnchor)
+            .isActive = true
+        pageControl.leadingAnchor.constraint(
+            equalTo: self.toolBar.leadingAnchor)
+            .isActive = true
+        pageControl.trailingAnchor.constraint(
+            equalTo: self.toolBar.trailingAnchor)
+            .isActive = true
+        
+        view.addSubview(toolBar)
+        
+        // Update constraints.
+        toolBar.translatesAutoresizingMaskIntoConstraints = false
+        toolBar.bottomAnchor.constraint(
+            equalTo: self.view.safeAreaLayoutGuide.bottomAnchor)
+            .isActive = true
+        toolBar.leadingAnchor.constraint(
+            equalTo: self.view.safeAreaLayoutGuide.leadingAnchor)
+            .isActive = true
+        toolBar.trailingAnchor.constraint(
+            equalTo: self.view.safeAreaLayoutGuide.trailingAnchor)
+            .isActive = true
     }
     
     private func addBackgroundView() {
@@ -135,6 +192,7 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
         
         addBackgroundView()
         addNavBar()
+        addToolBar()
         applyOptions()
         
         dataSource = self
@@ -147,7 +205,7 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
             setViewControllers([initialVC], direction: .forward, animated: true)
         }
     }
-
+    
     @objc
     private func dismiss(_ sender:UIBarButtonItem) {
         dismissMe(completion: nil)

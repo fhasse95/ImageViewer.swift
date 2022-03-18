@@ -23,6 +23,12 @@ UIGestureRecognizerDelegate {
         return _parent.navBar
     }
     
+    var toolBar:UIToolbar? {
+        guard let _parent = parent as? ImageCarouselViewController
+        else { return nil}
+        return _parent.toolBar
+    }
+    
     // MARK: Layout Constraints
     private var top:NSLayoutConstraint!
     private var leading:NSLayoutConstraint!
@@ -107,11 +113,6 @@ UIGestureRecognizerDelegate {
         addGestureRecognizers()
     }
     
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        self.navBar?.alpha = 1.0
-    }
-    
     override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
         layout()
@@ -173,13 +174,23 @@ UIGestureRecognizerDelegate {
         }
         
         let diffY = view.center.y - container.center.y
-        backgroundView?.alpha = 1.0 - abs(diffY/view.center.y)
-        if gestureRecognizer.state == .ended {
+        let alpha = 1.0 - abs(diffY/view.center.y)
+        backgroundView?.alpha = alpha
+        
+        if navBar?.alpha ?? 0 > 0 {
+            navBar?.alpha = alpha
+            toolBar?.alpha = alpha
+        }
+        
+        switch gestureRecognizer.state {
+        case .ended:
             if abs(diffY) > 60 {
                 dismiss(animated: true)
             } else {
                 executeCancelAnimation()
             }
+        default:
+            break
         }
     }
     
@@ -191,6 +202,7 @@ UIGestureRecognizerDelegate {
         
         UIView.animate(withDuration: 0.235) {
             self.navBar?.alpha = 0
+            self.toolBar?.alpha = 0
         }
     }
     
@@ -199,7 +211,9 @@ UIGestureRecognizerDelegate {
         
         let currentNavAlpha = self.navBar?.alpha ?? 0.0
         UIView.animate(withDuration: 0.235) {
-            self.navBar?.alpha = currentNavAlpha > 0.5 ? 0.0 : 1.0
+            let alpha = currentNavAlpha > 0.5 ? 0.0 : 1.0
+            self.navBar?.alpha = alpha
+            self.toolBar?.alpha = alpha
         }
     }
     
@@ -210,6 +224,7 @@ UIGestureRecognizerDelegate {
         
         UIView.animate(withDuration: 0.235) {
             self.navBar?.alpha = 0
+            self.toolBar?.alpha = 0
         }
     }
     
@@ -285,6 +300,7 @@ extension ImageViewerController {
             withDuration: 0.237,
             animations: {
                 self.imageView.center = self.view.center
+                self.imageView.layer.cornerRadius = 0
                 self.backgroundView?.alpha = 1.0
         }) {[weak self] _ in
             self?.isAnimating = false
