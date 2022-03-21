@@ -48,6 +48,18 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
                 controller: controller,
                 duration: animationDuration) { finished in
                     transitionContext.completeTransition(finished)
+                    
+                    // Scroll the parent collection view to the current item.
+                    if let controller = controller as? ImageCarouselViewController,
+                       let collectionView = controller.initialSourceView?
+                        .parentView(of: UICollectionView.self) {
+                        let rowIndex = controller.indexOffset + controller.currentIndex
+                        let indexPath = IndexPath(row: rowIndex, section: 0)
+                        collectionView.scrollToItem(
+                            at: indexPath,
+                            at: .left,
+                            animated: false)
+                    }
             }
              
         } else {

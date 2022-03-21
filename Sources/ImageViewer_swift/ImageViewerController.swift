@@ -16,17 +16,29 @@ UIGestureRecognizerDelegate {
     
     var index:Int = 0
     var imageItem:ImageItem!
+    
+    private var imageCarousel: ImageCarouselViewController? {
+        guard let _parent = parent as? ImageCarouselViewController
+        else { return nil }
+        return _parent
+    }
 
     var navBar:UINavigationBar? {
-        guard let _parent = parent as? ImageCarouselViewController
-            else { return nil}
-        return _parent.navBar
+        return self.imageCarousel?.navBar
     }
     
     var toolBar:UIToolbar? {
-        guard let _parent = parent as? ImageCarouselViewController
-        else { return nil}
-        return _parent.toolBar
+        return self.imageCarousel?.toolBar
+    }
+    
+    var hideControls: Bool {
+        get {
+            self.imageCarousel?.hideControls ?? false
+        }
+        
+        set {
+            self.imageCarousel?.hideControls = newValue
+        }
     }
     
     // MARK: Layout Constraints
@@ -200,21 +212,13 @@ UIGestureRecognizerDelegate {
         newZoomScale = max(newZoomScale, scrollView.minimumZoomScale)
         scrollView.setZoomScale(newZoomScale, animated: true)
         
-        UIView.animate(withDuration: 0.235) {
-            self.navBar?.alpha = 0
-            self.toolBar?.alpha = 0
-        }
+        self.hideControls = true
     }
     
     @objc
     func didSingleTap(_ recognizer: UITapGestureRecognizer) {
-        
         let currentNavAlpha = self.navBar?.alpha ?? 0.0
-        UIView.animate(withDuration: 0.235) {
-            let alpha = currentNavAlpha > 0.5 ? 0.0 : 1.0
-            self.navBar?.alpha = alpha
-            self.toolBar?.alpha = alpha
-        }
+        self.hideControls = currentNavAlpha > 0.5
     }
     
     @objc
@@ -222,10 +226,7 @@ UIGestureRecognizerDelegate {
         let pointInView = recognizer.location(in: imageView)
         zoomInOrOut(at: pointInView)
         
-        UIView.animate(withDuration: 0.235) {
-            self.navBar?.alpha = 0
-            self.toolBar?.alpha = 0
-        }
+        self.hideControls = true
     }
     
     func gestureRecognizerShouldBegin(
@@ -237,8 +238,6 @@ UIGestureRecognizerDelegate {
         let velocity = panGesture.velocity(in: scrollView)
         return abs(velocity.y) > abs(velocity.x)
     }
-    
-    
 }
 
 // MARK: Adjusting the dimensions

@@ -7,6 +7,20 @@ public protocol ImageDataSource:class {
 
 class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionViewControllerConvertible {
     
+    var hideControls: Bool = false {
+        didSet {
+            UIView.animate(withDuration: 0.235) {
+                self.navBar.alpha = self.hideControls ? 0 : 1
+                self.toolBar.alpha = self.hideControls ? 0 : 1
+                self.setNeedsStatusBarAppearanceUpdate()
+            }
+        }
+    }
+    
+    override var prefersStatusBarHidden: Bool {
+        return self.hideControls
+    }
+    
     unowned var initialSourceView: UIImageView?
     var sourceView: UIImageView? {
         guard let vc = viewControllers?.first as? ImageViewerController else {
@@ -107,7 +121,7 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
         // Add Navigation Bar
         if #available(iOS 13.0, *) {
             let closeBarButton = UIBarButtonItem(
-                barButtonSystemItem: .cancel,
+                barButtonSystemItem: .done,
                 target: self,
                 action: #selector(dismiss(_:)))
             navItem.leftBarButtonItem = closeBarButton
@@ -118,7 +132,9 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
     }
     
     private func addToolBar() {
-        pageControl.numberOfPages = self.imageDatasource?.numberOfImages() ?? 0
+        let numberOfPages = self.imageDatasource?.numberOfImages() ?? 0
+        pageControl.numberOfPages = numberOfPages
+        pageControl.isHidden = numberOfPages == 1
         pageControl.currentPage = self.currentIndex
         toolBar.addSubview(pageControl)
         
