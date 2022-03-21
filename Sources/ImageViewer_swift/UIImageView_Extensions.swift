@@ -119,12 +119,26 @@ extension UIImageView {
             _tapRecognizer!.numberOfTouchesRequired = 1
             _tapRecognizer!.numberOfTapsRequired = 1
         }
+        
         // Pass the Data
         _tapRecognizer!.imageDatasource = datasource
         _tapRecognizer!.initialIndex = initialIndex
         _tapRecognizer!.options = options
         _tapRecognizer!.from = from
         addGestureRecognizer(_tapRecognizer!)
+            
+        let keyWindow = UIApplication.shared.windows.filter {$0.isKeyWindow}.first
+        
+        if var topController = keyWindow?.rootViewController {
+            while let presentedViewController = topController.presentedViewController {
+                topController = presentedViewController
+            }
+            
+            if let imageCarouselViewController = topController
+                as? ImageCarouselViewController {
+                imageCarouselViewController.imageDatasource = datasource
+            }
+        }
     }
     
     @objc

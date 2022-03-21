@@ -48,7 +48,7 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
     
     var options:[ImageViewerOption] = []
     
-    private var onRightNavBarTapped:((Int) -> Void)?
+    private var onDeleteButtonTapped:((Int) -> Void)?
     
     private(set) lazy var navBar: UINavigationBar = {
         let _navBar = UINavigationBar(frame: .zero)
@@ -120,11 +120,11 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
     private func addNavBar() {
         // Add Navigation Bar
         if #available(iOS 13.0, *) {
-            let closeBarButton = UIBarButtonItem(
+            let doneBarButton = UIBarButtonItem(
                 barButtonSystemItem: .done,
                 target: self,
                 action: #selector(dismiss(_:)))
-            navItem.leftBarButtonItem = closeBarButton
+            navItem.rightBarButtonItem = doneBarButton
         }
         
         navBar.items = [navItem]
@@ -138,9 +138,29 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
         pageControl.currentPage = self.currentIndex
         toolBar.addSubview(pageControl)
         
+        if #available(iOS 13.0, *) {
+            var items = [UIBarButtonItem]()
+            items.append(
+                UIBarButtonItem(
+                    barButtonSystemItem: .action,
+                    target: self,
+                    action: #selector(shareImage(_:)))
+            )
+            items.append(
+                UIBarButtonItem(
+                    barButtonSystemItem: .flexibleSpace,
+                    target: nil,
+                    action: nil)
+            )
+            toolBar.items = items
+        }
+        
+        let size = toolBar.sizeThatFits(.zero)
+        
         // Update constraints.
         pageControl.translatesAutoresizingMaskIntoConstraints = false
-        pageControl.heightAnchor.constraint(equalToConstant: 35)
+        pageControl.heightAnchor.constraint(
+            equalToConstant: size.height)
             .isActive = true
         pageControl.topAnchor.constraint(
             equalTo: self.toolBar.topAnchor)
@@ -181,22 +201,14 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
         
         options.forEach {
             switch $0 {
-            case .closeIcon(let icon):
-                navItem.leftBarButtonItem?.image = icon
-            case .rightNavItemTitle(let title, let onTap):
-                navItem.rightBarButtonItem = UIBarButtonItem(
-                    title: title,
-                    style: .plain,
+            case .deleteButton(let onTap):
+                let deleteBarButtonItem = UIBarButtonItem(
+                    barButtonSystemItem: .trash,
                     target: self,
-                    action: #selector(diTapRightNavBarItem(_:)))
-                onRightNavBarTapped = onTap
-            case .rightNavItemIcon(let icon, let onTap):
-                navItem.rightBarButtonItem = UIBarButtonItem(
-                    image: icon,
-                    style: .plain,
-                    target: self,
-                    action: #selector(diTapRightNavBarItem(_:)))
-                onRightNavBarTapped = onTap
+                    action: #selector(deleteImage(_:)))
+                deleteBarButtonItem.tintColor = .systemRed
+                toolBar.items?.append(deleteBarButtonItem)
+                onDeleteButtonTapped = onTap
             case .indexOffset(let indexOffset):
                 self.indexOffset = indexOffset
             }
@@ -220,6 +232,32 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
                 imageItem: imageDatasource.imageItem(at: initialIndex))
             setViewControllers([initialVC], direction: .forward, animated: true)
         }
+    }
+    
+    @objc
+    private func shareImage(_ sender:UIBarButtonItem) {
+        
+        guard let image = self.imageDatasource?.imageItem(
+            at: self.currentIndex)
+        else {
+            return
+        }
+        
+        let activityViewController = UIActivityViewController(
+            activityItems: [image],
+            applicationActivities: nil)
+        activityViewController.popoverPresentationController?
+            .sourceView = self.view
+        
+        self.present(
+            activityViewController,
+            animated: true,
+            completion: nil)
+    }
+    
+    @objc
+    private func deleteImage(_ sender:UIBarButtonItem) {
+        onDeleteButtonTapped?(self.currentIndex)
     }
     
     @objc
@@ -250,14 +288,6 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
     deinit {
         initialSourceView?.alpha = 1.0
     }
-    
-    @objc
-    func diTapRightNavBarItem(_ sender:UIBarButtonItem) {
-        guard let onTap = onRightNavBarTapped,
-            let _firstVC = viewControllers?.first as? ImageViewerController
-            else { return }
-        onTap(_firstVC.index)
-    }
 }
 
 extension ImageCarouselViewController:UIPageViewControllerDataSource {
@@ -272,7 +302,7 @@ extension ImageCarouselViewController:UIPageViewControllerDataSource {
         let newIndex = vc.index - 1
         return ImageViewerController.init(
             index: newIndex,
-            imageItem:  imageDatasource.imageItem(at: newIndex))
+            imageItem: imageDatasource.imageItem(at: newIndex))
     }
     
     public func pageViewController(
