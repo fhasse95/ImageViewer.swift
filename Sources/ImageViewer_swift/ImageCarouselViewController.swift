@@ -5,7 +5,7 @@ public protocol ImageDataSource:class {
     func imageItem(at index:Int) -> ImageItem
 }
 
-class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionViewControllerConvertible {
+public class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionViewControllerConvertible {
     
     var hideControls: Bool = false {
         didSet {
@@ -17,7 +17,7 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
         }
     }
     
-    override var prefersStatusBarHidden: Bool {
+    public override var prefersStatusBarHidden: Bool {
         return self.hideControls
     }
     
@@ -39,7 +39,7 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
     weak var imageDatasource:ImageDataSource?
     
     var initialIndex = 0
-    var currentIndex = 0 {
+    public var currentIndex = 0 {
         didSet {
             self.pageControl.currentPage = self.currentIndex
         }
@@ -48,7 +48,7 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
     
     var options:[ImageViewerOption] = []
     
-    private var onDeleteButtonTapped:((Int) -> Void)?
+    private var onDeleteButtonTapped:((ImageCarouselViewController) -> Void)?
     
     private(set) lazy var navBar: UINavigationBar = {
         let _navBar = UINavigationBar(frame: .zero)
@@ -77,14 +77,15 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
     }()
     
     private(set) lazy var backgroundView:UIView? = {
-        let _v = UIView()
-        if #available(iOS 13.0, *) {
-            _v.backgroundColor = .systemBackground
-        } else {
-            _v.backgroundColor = .white
+        let _backgroundView = UIView()
+        switch self.traitCollection.userInterfaceStyle {
+        case .dark:
+            _backgroundView.backgroundColor = .black
+        default:
+            _backgroundView.backgroundColor = .white
         }
-        _v.alpha = 1.0
-        return _v
+        _backgroundView.alpha = 1.0
+        return _backgroundView
     }()
     
     private(set) lazy var navItem = UINavigationItem()
@@ -115,6 +116,19 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    public override func traitCollectionDidChange(
+        _ previousTraitCollection: UITraitCollection?) {
+            
+        super.traitCollectionDidChange(previousTraitCollection)
+        
+        switch self.traitCollection.userInterfaceStyle {
+        case .dark:
+            self.backgroundView?.backgroundColor = .black
+        default:
+            self.backgroundView?.backgroundColor = .white
+        }
     }
     
     private func addNavBar() {
@@ -237,8 +251,21 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
     @objc
     private func shareImage(_ sender:UIBarButtonItem) {
         
-        guard let image = self.imageDatasource?.imageItem(
-            at: self.currentIndex)
+        guard let imageItem = self.imageDatasource?.imageItem(
+            at: self.currentIndex) as? ImageItem
+        else {
+            return
+        }
+        
+        var image: UIImage?
+        switch imageItem {
+        case .image(let img):
+            image = img
+        default:
+            break
+        }
+        
+        guard let image = image
         else {
             return
         }
@@ -257,15 +284,15 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
     
     @objc
     private func deleteImage(_ sender:UIBarButtonItem) {
-        onDeleteButtonTapped?(self.currentIndex)
+        onDeleteButtonTapped?(self)
     }
     
     @objc
     private func dismiss(_ sender:UIBarButtonItem) {
-        dismissMe(completion: nil)
+        dismissView(completion: nil)
     }
     
-    public func dismissMe(completion: (() -> Void)? = nil) {
+    public func dismissView(completion: (() -> Void)? = nil) {
         
         guard let collectionView = self.initialSourceView?
                 .parentView(of: UICollectionView.self)
@@ -273,10 +300,8 @@ class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionVie
             return
         }
         
-        let rowIndex = self.indexOffset + self.currentIndex
-        let indexPath = IndexPath(row: rowIndex, section: 0)
-        let sourceView = collectionView.cellForItem(at: indexPath)?.contentView
-        sourceView?.alpha = 1.0
+        // Show all collection view cells again.
+        self.resetParentScrollViewCellVisibility()
         
         UIView.animate(withDuration: 0.235, animations: {
             self.view.alpha = 0.0
@@ -337,8 +362,56 @@ extension ImageCarouselViewController: UIPageViewControllerDelegate {
             return
         }
         
-        // Show all other collection view cells
+        // Show all collection view cells again.
+        self.resetParentScrollViewCellVisibility()
+        
+        // Update the current index.
+        self.currentIndex = vc.index
+        
+        // Scroll the parent collection view to the current item.
+        self.scrollParentScrollViewToCurrentItem()
+        
+        // Hide the currently displayed collection view cell
         // (used for the dismiss animation).
+        self.hideCurrentParentScrollViewCell()
+    }
+    
+    public func scrollParentScrollViewToCurrentItem(
+        onlyScrollIfNecessary: Bool = true) {
+        
+        let rowIndex = self.indexOffset + self.currentIndex
+        let indexPath = IndexPath(row: rowIndex, section: 0)
+        
+        guard let collectionView = self.initialSourceView?
+                .parentView(of: UICollectionView.self),
+              let collectionViewCell = collectionView.cellForItem(
+                at: indexPath)
+        else {
+            return
+        }
+
+        // Only scroll when the cell is not fully visible (e.g. cut off).
+        let completelyVisible =
+            collectionView.bounds.contains(
+                collectionViewCell.frame)
+        
+        let shouldScroll = !completelyVisible
+        if shouldScroll || !onlyScrollIfNecessary {
+            collectionView.scrollToItem(
+                at: indexPath,
+                at: .left,
+                animated: false)
+        }
+    }
+    
+    public func resetParentScrollViewCellVisibility() {
+        guard let collectionView = self.initialSourceView?
+                .parentView(of: UICollectionView.self)
+        else {
+            return
+        }
+        
+        // Show all collection view cells again.
         let numberOfRows = collectionView.numberOfItems(inSection: 0)
         for rowIndex in 0..<numberOfRows {
             let indexPath = IndexPath(row: rowIndex, section: 0)
@@ -346,20 +419,19 @@ extension ImageCarouselViewController: UIPageViewControllerDelegate {
                 at: indexPath)?.contentView
             collectionViewCell?.alpha = 1
         }
-        
-        // Update the current index.
-        self.currentIndex = vc.index
-        
-        // Scroll the parent collection view to the current item.
-        let rowIndex = self.indexOffset + self.currentIndex
-        let indexPath = IndexPath(row: rowIndex, section: 0)
-        collectionView.scrollToItem(
-            at: indexPath,
-            at: .left,
-            animated: false)
+    }
+    
+    public func hideCurrentParentScrollViewCell() {
+        guard let collectionView = self.initialSourceView?
+                .parentView(of: UICollectionView.self)
+        else {
+            return
+        }
         
         // Hide the currently displayed collection view cell
         // (used for the dismiss animation).
+        let rowIndex = self.indexOffset + self.currentIndex
+        let indexPath = IndexPath(row: rowIndex, section: 0)
         let collectionViewCell = collectionView.cellForItem(
             at: indexPath)?.contentView
         collectionViewCell?.alpha = 0
@@ -368,7 +440,7 @@ extension ImageCarouselViewController: UIPageViewControllerDelegate {
 
 extension ImageCarouselViewController: UINavigationBarDelegate {
     
-    func position(for bar: UIBarPositioning) -> UIBarPosition {
+    public func position(for bar: UIBarPositioning) -> UIBarPosition {
         return .topAttached
     }
 }

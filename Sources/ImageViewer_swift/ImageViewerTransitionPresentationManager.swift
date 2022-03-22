@@ -32,7 +32,7 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
 
     func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?)
         -> TimeInterval {
-            return 0.3
+            return 0.25
     }
     
     func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
@@ -50,18 +50,10 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
                     transitionContext.completeTransition(finished)
                     
                     // Scroll the parent collection view to the current item.
-                    if let controller = controller as? ImageCarouselViewController,
-                       let collectionView = controller.initialSourceView?
-                        .parentView(of: UICollectionView.self) {
-                        let rowIndex = controller.indexOffset + controller.currentIndex
-                        let indexPath = IndexPath(row: rowIndex, section: 0)
-                        collectionView.scrollToItem(
-                            at: indexPath,
-                            at: .left,
-                            animated: false)
+                    if let controller = controller as? ImageCarouselViewController {
+                        controller.scrollParentScrollViewToCurrentItem()
                     }
             }
-             
         } else {
             dismissAnimation(
                 transitionView: transitionContext.containerView,

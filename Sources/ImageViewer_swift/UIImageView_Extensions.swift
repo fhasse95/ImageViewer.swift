@@ -135,8 +135,21 @@ extension UIImageView {
             }
             
             if let imageCarouselViewController = topController
-                as? ImageCarouselViewController {
+                as? ImageCarouselViewController,
+               let collectionView = imageCarouselViewController.initialSourceView?
+                .parentView(of: UICollectionView.self) {
+                
+                // Update the data source.
                 imageCarouselViewController.imageDatasource = datasource
+                
+                DispatchQueue.main.async {
+                    // Show all collection view cells again.
+                    imageCarouselViewController.resetParentScrollViewCellVisibility()
+                    
+                    // Hide the currently displayed collection view cell
+                    // (used for the dismiss animation).
+                    imageCarouselViewController.hideCurrentParentScrollViewCell()
+                }
             }
         }
     }

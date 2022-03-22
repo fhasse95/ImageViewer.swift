@@ -102,24 +102,26 @@ UIGestureRecognizerDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        switch imageItem {
-        case .image(let img):
-            imageView.image = img
-            imageView.layoutIfNeeded()
+        DispatchQueue.main.async {
+            switch self.imageItem {
+            case .image(let img):
+                self.imageView.image = img
+                self.imageView.layoutIfNeeded()
             #if canImport(SDWebImage)
-        case .url(let url, let placeholder):
-            imageView.sd_setImage(
-                with: url,
-                placeholderImage: placeholder,
-                options: [],
-                progress: nil) {(img, err, type, url) in
-                    DispatchQueue.main.async {[weak self] in
-                        self?.layout()
+            case .url(let url, let placeholder):
+                self.imageView.sd_setImage(
+                    with: url,
+                    placeholderImage: placeholder,
+                    options: [],
+                    progress: nil) {(img, err, type, url) in
+                        DispatchQueue.main.async {[weak self] in
+                            self?.layout()
+                        }
                     }
-            }
             #endif
-        default:
-            break
+            default:
+                break
+            }
         }
         
         addGestureRecognizers()
