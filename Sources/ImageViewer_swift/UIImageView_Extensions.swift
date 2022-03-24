@@ -3,7 +3,7 @@ import UIKit
 extension UIImageView {
     
     // Data holder tap recognizer
-    private class TapWithDataRecognizer:UITapGestureRecognizer {
+    public class TapWithDataRecognizer:UITapGestureRecognizer {
         weak var from:UIViewController?
         var imageDatasource:ImageDataSource?
         var initialIndex:Int = 0
@@ -154,8 +154,37 @@ extension UIImageView {
         }
     }
     
+    public func showImageViewer(transitionType: ImageViewerTransitionType) {
+        if let tapWithDataRecognizer = self.gestureRecognizers?
+            .first(where: { $0 is TapWithDataRecognizer })
+            as? TapWithDataRecognizer {
+            
+            func removeAllTransitionTypeOptions() {
+                for (index, option) in tapWithDataRecognizer.options.enumerated() {
+                    guard tapWithDataRecognizer.options.count > index
+                    else {
+                        continue
+                    }
+                    
+                    switch option {
+                    case .transitionType(_):
+                        tapWithDataRecognizer.options.remove(at: index)
+                    default:
+                        break
+                    }
+                }
+            }
+            
+            removeAllTransitionTypeOptions()
+            tapWithDataRecognizer.options.append(.transitionType(transitionType))
+            
+            self.showImageViewer(tapWithDataRecognizer)
+            removeAllTransitionTypeOptions()
+        }
+    }
+    
     @objc
-    private func showImageViewer(_ sender:TapWithDataRecognizer) {
+    private func showImageViewer(_ sender: TapWithDataRecognizer) {
         guard let sourceView = sender.view as? UIImageView else { return }
         
         let imageCarousel = ImageCarouselViewController.init(

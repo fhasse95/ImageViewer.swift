@@ -213,7 +213,6 @@ UIGestureRecognizerDelegate {
         var newZoomScale = scrollView.zoomScale / 1.5
         newZoomScale = max(newZoomScale, scrollView.minimumZoomScale)
         scrollView.setZoomScale(newZoomScale, animated: true)
-        
         self.hideControls = true
     }
     
@@ -227,7 +226,6 @@ UIGestureRecognizerDelegate {
     func didDoubleTap(_ recognizer:UITapGestureRecognizer) {
         let pointInView = recognizer.location(in: imageView)
         zoomInOrOut(at: pointInView)
-        
         self.hideControls = true
     }
     

@@ -7,6 +7,8 @@ public protocol ImageDataSource:class {
 
 public class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionViewControllerConvertible {
     
+    var transitionType: ImageViewerTransitionType = .move
+    
     var hideControls: Bool = false {
         didSet {
             UIView.animate(withDuration: 0.235) {
@@ -225,6 +227,8 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
                 onDeleteButtonTapped = onTap
             case .indexOffset(let indexOffset):
                 self.indexOffset = indexOffset
+            case .transitionType(let type):
+                self.transitionType = type
             }
         }
     }

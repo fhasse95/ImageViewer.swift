@@ -15,6 +15,9 @@ protocol ImageViewerTransitionViewControllerConvertible {
     
     // The final view
     var targetView: UIImageView? { get }
+    
+    // The transition type.
+    var transitionType: ImageViewerTransitionType { get set }
 }
 
 final class ImageViewerTransitionPresentationAnimator:NSObject {
@@ -66,13 +69,13 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
     
     private func createDummyImageView(frame: CGRect, image:UIImage? = nil)
         -> UIImageView {
-            let dummyImageView:UIImageView = UIImageView(frame: frame)
-            dummyImageView.clipsToBounds = true
-            dummyImageView.contentMode = .scaleAspectFit
-            dummyImageView.alpha = 1.0
-            dummyImageView.image = image
-            dummyImageView.layer.masksToBounds = true
-            return dummyImageView
+        let dummyImageView:UIImageView = UIImageView(frame: frame)
+        dummyImageView.clipsToBounds = true
+        dummyImageView.contentMode = .scaleAspectFit
+        dummyImageView.alpha = 1.0
+        dummyImageView.image = image
+        dummyImageView.layer.masksToBounds = true
+        return dummyImageView
     }
     
     private func presentAnimation(
@@ -89,8 +92,11 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
         
         let rowIndex = transitionVC.indexOffset + transitionVC.currentIndex
         let indexPath = IndexPath(row: rowIndex, section: 0)
-        let sourceView = collectionView.cellForItem(at: indexPath)?.contentView
-        guard let sourceView = sourceView else {
+        guard let sourceView = collectionView
+                .cellForItem(at: indexPath)?
+                .contentView,
+              let targetView = transitionVC.targetView
+        else {
             return
         }
         
@@ -98,10 +104,18 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
         controller.view.alpha = 0.0
         
         transitionView.addSubview(controller.view)
-        transitionVC.targetView?.alpha = 0.0
+        targetView.alpha = 0.0
+        
+        var sourceFrame: CGRect = .zero
+        switch transitionVC.transitionType {
+        case .none:
+            sourceFrame = UIScreen.main.bounds
+        case .move:
+            sourceFrame = sourceView.frameRelativeToWindow()
+        }
         
         let dummyImageView = createDummyImageView(
-            frame: sourceView.frameRelativeToWindow(),
+            frame: sourceFrame,
             image: transitionVC.sourceView?.image)
         dummyImageView.layer.cornerRadius = sourceView.layer.cornerRadius
         transitionView.addSubview(dummyImageView)
@@ -111,7 +125,7 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
             controller.view.alpha = 1.0
         }) { finished in
             dummyImageView.removeFromSuperview()
-            transitionVC.targetView?.alpha = 1.0
+            targetView.alpha = 1.0
             completed(finished)
         }
     }
