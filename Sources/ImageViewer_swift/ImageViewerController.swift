@@ -31,7 +31,7 @@ UIGestureRecognizerDelegate {
         return self.imageCarousel?.toolBar
     }
     
-    var hideControls: Bool {
+    public var hideControls: Bool {
         get {
             self.imageCarousel?.hideControls ?? false
         }
@@ -96,32 +96,28 @@ UIGestureRecognizerDelegate {
         leading.isActive = true
         trailing.isActive = true
         bottom.isActive = true
-        
     }
     
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        DispatchQueue.main.async {
-            switch self.imageItem {
-            case .image(let img):
-                self.imageView.image = img
-                self.imageView.layoutIfNeeded()
-            #if canImport(SDWebImage)
-            case .url(let url, let placeholder):
-                self.imageView.sd_setImage(
-                    with: url,
-                    placeholderImage: placeholder,
-                    options: [],
-                    progress: nil) {(img, err, type, url) in
-                        DispatchQueue.main.async {[weak self] in
-                            self?.layout()
-                        }
+        
+        switch self.imageItem {
+        case .image(let img):
+            self.imageView.image = img
+        #if canImport(SDWebImage)
+        case .url(let url, let placeholder):
+            self.imageView.sd_setImage(
+                with: url,
+                placeholderImage: placeholder,
+                options: [],
+                progress: nil) {(img, err, type, url) in
+                    DispatchQueue.main.async {[weak self] in
+                        self?.layout()
                     }
-            #endif
-            default:
-                break
-            }
+                }
+        #endif
+        default:
+            break
         }
         
         addGestureRecognizers()
@@ -213,20 +209,17 @@ UIGestureRecognizerDelegate {
         var newZoomScale = scrollView.zoomScale / 1.5
         newZoomScale = max(newZoomScale, scrollView.minimumZoomScale)
         scrollView.setZoomScale(newZoomScale, animated: true)
-        self.hideControls = true
     }
     
     @objc
     func didSingleTap(_ recognizer: UITapGestureRecognizer) {
-        let currentNavAlpha = self.navBar?.alpha ?? 0.0
-        self.hideControls = currentNavAlpha > 0.5
+        self.hideControls = !self.hideControls
     }
     
     @objc
     func didDoubleTap(_ recognizer:UITapGestureRecognizer) {
         let pointInView = recognizer.location(in: imageView)
         zoomInOrOut(at: pointInView)
-        self.hideControls = true
     }
     
     func gestureRecognizerShouldBegin(
@@ -265,8 +258,9 @@ extension ImageViewerController {
     
     
     func zoomInOrOut(at point:CGPoint) {
-        let newZoomScale = scrollView.zoomScale == scrollView.minimumZoomScale
-            ? maxZoomScale : scrollView.minimumZoomScale
+        
+        let zoomIn = scrollView.zoomScale == scrollView.minimumZoomScale
+        let newZoomScale = zoomIn ? maxZoomScale : scrollView.minimumZoomScale
         let size = scrollView.bounds.size
         let w = size.width / newZoomScale
         let h = size.height / newZoomScale

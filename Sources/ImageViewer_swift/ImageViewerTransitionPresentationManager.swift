@@ -102,7 +102,6 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
         
         sourceView.alpha = 0.0
         controller.view.alpha = 0.0
-        
         transitionView.addSubview(controller.view)
         targetView.alpha = 0.0
         

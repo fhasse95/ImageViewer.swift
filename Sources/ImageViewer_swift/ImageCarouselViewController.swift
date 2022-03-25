@@ -11,9 +11,20 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
     
     var hideControls: Bool = false {
         didSet {
-            UIView.animate(withDuration: 0.235) {
-                self.navBar.alpha = self.hideControls ? 0 : 1
-                self.toolBar.alpha = self.hideControls ? 0 : 1
+            
+            let navBarOffset = self.navBar.frame.height + self.view.safeAreaInsets.top
+            let navBarTransform = self.hideControls ?
+                self.navBar.transform.translatedBy(x: 0.0, y: -navBarOffset) :
+                self.navBar.transform.translatedBy(x: 0.0, y: navBarOffset)
+            
+            let toolBarOffset = self.toolBar.frame.height + self.view.safeAreaInsets.bottom
+            let toolBarTransform = self.hideControls ?
+                self.toolBar.transform.translatedBy(x: 0.0, y: toolBarOffset) :
+                self.toolBar.transform.translatedBy(x: 0.0, y: -toolBarOffset)
+            
+            UIView.animate(withDuration: UINavigationController.hideShowBarDuration) {
+                self.navBar.transform = navBarTransform
+                self.toolBar.transform = toolBarTransform
                 self.setNeedsStatusBarAppearanceUpdate()
             }
         }
@@ -51,6 +62,9 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
     var options:[ImageViewerOption] = []
     
     private var onDeleteButtonTapped:((ImageCarouselViewController) -> Void)?
+    
+    private var initialNavBarTransform: CGAffineTransform?
+    private var initialToolBarTransform: CGAffineTransform?
     
     private(set) lazy var navBar: UINavigationBar = {
         let _navBar = UINavigationBar(frame: .zero)
@@ -94,6 +108,8 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
     
     private let imageViewerPresentationDelegate = ImageViewerTransitionPresentationManager()
     
+    private var imageViewerControllers = [ImageViewerController]()
+    
     public init(
         sourceView:UIImageView,
         imageDataSource: ImageDataSource?,
@@ -114,6 +130,16 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         transitioningDelegate = imageViewerPresentationDelegate
         modalPresentationStyle = .custom
         modalPresentationCapturesStatusBarAppearance = true
+            
+        if let imageDatasource = self.imageDatasource {
+            let numberOfImages = imageDatasource.numberOfImages() ?? 0
+            for index in 0..<numberOfImages {
+                let viewController = ImageViewerController.init(
+                    index: index,
+                    imageItem: imageDatasource.imageItem(at: index))
+                self.imageViewerControllers.append(viewController)
+            }
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -145,6 +171,8 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         
         navBar.items = [navItem]
         navBar.insert(to: view)
+        
+        self.initialNavBarTransform = navBar.transform
     }
     
     private func addToolBar() {
@@ -175,11 +203,11 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         
         // Update constraints.
         pageControl.translatesAutoresizingMaskIntoConstraints = false
-        pageControl.heightAnchor.constraint(
-            equalToConstant: size.height)
+        pageControl.centerYAnchor.constraint(
+            equalTo: self.toolBar.centerYAnchor)
             .isActive = true
-        pageControl.topAnchor.constraint(
-            equalTo: self.toolBar.topAnchor)
+        pageControl.heightAnchor.constraint(
+            equalToConstant: 50)
             .isActive = true
         pageControl.bottomAnchor.constraint(
             equalTo: self.toolBar.bottomAnchor)
@@ -204,6 +232,8 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         toolBar.trailingAnchor.constraint(
             equalTo: self.view.safeAreaLayoutGuide.trailingAnchor)
             .isActive = true
+        
+        self.initialToolBarTransform = toolBar.transform
     }
     
     private func addBackgroundView() {
@@ -243,11 +273,9 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         
         dataSource = self
         delegate = self
-
+        
         if let imageDatasource = imageDatasource {
-            let initialVC:ImageViewerController = .init(
-                index: initialIndex,
-                imageItem: imageDatasource.imageItem(at: initialIndex))
+            let initialVC = self.imageViewerControllers[self.initialIndex]
             setViewControllers([initialVC], direction: .forward, animated: true)
         }
     }
@@ -329,9 +357,7 @@ extension ImageCarouselViewController:UIPageViewControllerDataSource {
         guard vc.index > 0 else { return nil }
  
         let newIndex = vc.index - 1
-        return ImageViewerController.init(
-            index: newIndex,
-            imageItem: imageDatasource.imageItem(at: newIndex))
+        return self.imageViewerControllers[newIndex]
     }
     
     public func pageViewController(
@@ -343,9 +369,7 @@ extension ImageCarouselViewController:UIPageViewControllerDataSource {
         guard vc.index <= (imageDatasource.numberOfImages() - 2) else { return nil }
         
         let newIndex = vc.index + 1
-        return ImageViewerController.init(
-            index: newIndex,
-            imageItem: imageDatasource.imageItem(at: newIndex))
+        return self.imageViewerControllers[newIndex]
     }
 }
 
