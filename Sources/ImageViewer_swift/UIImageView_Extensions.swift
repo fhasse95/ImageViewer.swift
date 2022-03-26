@@ -20,7 +20,7 @@ extension UIImageView {
         options:[ImageViewerOption] = [],
         from:UIViewController? = nil) {
         setup(
-            datasource: SimpleImageDatasource(imageItems: [.image(image)]),
+            datasource: SimpleImageDatasource(imageItems: [.image(image!, image!)]),
             options: options,
             from: from)
     }
@@ -46,15 +46,23 @@ extension UIImageView {
     #endif
     
     public func setupImageViewer(
-        images:[UIImage],
+        images: [UIImage],
+        thumbnailImages: [UIImage],
         initialIndex:Int = 0,
-        options:[ImageViewerOption] = [],
-        from:UIViewController? = nil) {
+        options: [ImageViewerOption] = [],
+        from: UIViewController? = nil) {
+            
+        var imageItems = [ImageItem]()
+        for index in 0..<images.count {
+            imageItems.append(
+                ImageItem.image(
+                    images[index],
+                    thumbnailImages[index]
+                ))
+        }
         
         let datasource = SimpleImageDatasource(
-            imageItems: images.compactMap {
-                ImageItem.image($0)
-        })
+            imageItems: imageItems)
         setup(
             datasource: datasource,
             initialIndex: initialIndex,

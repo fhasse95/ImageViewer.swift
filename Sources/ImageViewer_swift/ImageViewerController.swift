@@ -102,25 +102,26 @@ UIGestureRecognizerDelegate {
         super.viewDidLoad()
         
         switch self.imageItem {
-        case .image(let img):
-            self.imageView.image = img
-        #if canImport(SDWebImage)
-        case .url(let url, let placeholder):
-            self.imageView.sd_setImage(
-                with: url,
-                placeholderImage: placeholder,
-                options: [],
-                progress: nil) {(img, err, type, url) in
-                    DispatchQueue.main.async {[weak self] in
-                        self?.layout()
-                    }
-                }
-        #endif
+        case .image(let image, let thumbnailImage):
+            self.imageView.image = thumbnailImage
         default:
             break
         }
         
         addGestureRecognizers()
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        DispatchQueue.main.async {
+            switch self.imageItem {
+            case .image(let image, let thumbnailImage):
+                self.imageView.image = image
+            default:
+                break
+            }
+        }
     }
     
     override func viewWillLayoutSubviews() {
@@ -253,14 +254,15 @@ extension ImageViewerController {
         scrollView.minimumZoomScale = minScale
         scrollView.zoomScale = minScale
         maxZoomScale = maxScale
-        scrollView.maximumZoomScale = maxZoomScale * 1.1
+        scrollView.maximumZoomScale = maxZoomScale * 1.5
     }
-    
     
     func zoomInOrOut(at point:CGPoint) {
         
         let zoomIn = scrollView.zoomScale == scrollView.minimumZoomScale
-        let newZoomScale = zoomIn ? maxZoomScale : scrollView.minimumZoomScale
+        let newZoomScale = zoomIn ?
+            scrollView.maximumZoomScale :
+            scrollView.minimumZoomScale
         let size = scrollView.bounds.size
         let w = size.width / newZoomScale
         let h = size.height / newZoomScale
@@ -271,6 +273,8 @@ extension ImageViewerController {
     }
     
     func updateConstraintsForSize(_ size: CGSize) {
+        
+        imageView.sizeToFit()
         
         let yOffset = max(0, (size.height - imageView.frame.height) / 2)
         top.constant = yOffset

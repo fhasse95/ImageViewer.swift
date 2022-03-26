@@ -63,9 +63,6 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
     
     private var onDeleteButtonTapped:((ImageCarouselViewController) -> Void)?
     
-    private var initialNavBarTransform: CGAffineTransform?
-    private var initialToolBarTransform: CGAffineTransform?
-    
     private(set) lazy var navBar: UINavigationBar = {
         let _navBar = UINavigationBar(frame: .zero)
         _navBar.isTranslucent = true
@@ -130,7 +127,7 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         transitioningDelegate = imageViewerPresentationDelegate
         modalPresentationStyle = .custom
         modalPresentationCapturesStatusBarAppearance = true
-            
+        
         if let imageDatasource = self.imageDatasource {
             let numberOfImages = imageDatasource.numberOfImages() ?? 0
             for index in 0..<numberOfImages {
@@ -171,8 +168,6 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         
         navBar.items = [navItem]
         navBar.insert(to: view)
-        
-        self.initialNavBarTransform = navBar.transform
     }
     
     private func addToolBar() {
@@ -198,8 +193,6 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
             )
             toolBar.items = items
         }
-        
-        let size = toolBar.sizeThatFits(.zero)
         
         // Update constraints.
         pageControl.translatesAutoresizingMaskIntoConstraints = false
@@ -232,8 +225,6 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         toolBar.trailingAnchor.constraint(
             equalTo: self.view.safeAreaLayoutGuide.trailingAnchor)
             .isActive = true
-        
-        self.initialToolBarTransform = toolBar.transform
     }
     
     private func addBackgroundView() {
@@ -289,21 +280,21 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
             return
         }
         
-        var image: UIImage?
+        var imageToShare: UIImage?
         switch imageItem {
-        case .image(let img):
-            image = img
+        case .image(let image, let thumbnailImage):
+            imageToShare = image
         default:
             break
         }
         
-        guard let image = image
+        guard let imageToShare = imageToShare
         else {
             return
         }
         
         let activityViewController = UIActivityViewController(
-            activityItems: [image],
+            activityItems: [imageToShare],
             applicationActivities: nil)
         activityViewController.popoverPresentationController?
             .sourceView = self.view
@@ -407,62 +398,78 @@ extension ImageCarouselViewController: UIPageViewControllerDelegate {
     public func scrollParentScrollViewToCurrentItem(
         onlyScrollIfNecessary: Bool = true) {
         
-        let rowIndex = self.indexOffset + self.currentIndex
-        let indexPath = IndexPath(row: rowIndex, section: 0)
-        
-        guard let collectionView = self.initialSourceView?
-                .parentView(of: UICollectionView.self),
-              let collectionViewCell = collectionView.cellForItem(
-                at: indexPath)
-        else {
-            return
-        }
-
-        // Only scroll when the cell is not fully visible (e.g. cut off).
-        let completelyVisible =
+        autoreleasepool {
+            let rowIndex = self.indexOffset + self.currentIndex
+            let indexPath = IndexPath(row: rowIndex, section: 0)
+            
+            guard let collectionView = self.initialSourceView?
+                    .parentView(of: UICollectionView.self),
+                  let collectionViewCell = collectionView.cellForItem(
+                    at: indexPath)
+            else {
+                return
+            }
+            
+            // Only scroll when the cell is not fully visible (e.g. cut off).
+            let completelyVisible =
             collectionView.bounds.contains(
                 collectionViewCell.frame)
-        
-        let shouldScroll = !completelyVisible
-        if shouldScroll || !onlyScrollIfNecessary {
-            collectionView.scrollToItem(
-                at: indexPath,
-                at: .left,
-                animated: false)
+            
+            let shouldScroll = !completelyVisible
+            if shouldScroll || !onlyScrollIfNecessary {
+                DispatchQueue.main.async {
+                    collectionView.scrollToItem(
+                        at: indexPath,
+                        at: .left,
+                        animated: false)
+                }
+            }
         }
     }
     
     public func resetParentScrollViewCellVisibility() {
-        guard let collectionView = self.initialSourceView?
-                .parentView(of: UICollectionView.self)
-        else {
-            return
-        }
         
-        // Show all collection view cells again.
-        let numberOfRows = collectionView.numberOfItems(inSection: 0)
-        for rowIndex in 0..<numberOfRows {
-            let indexPath = IndexPath(row: rowIndex, section: 0)
-            let collectionViewCell = collectionView.cellForItem(
-                at: indexPath)?.contentView
-            collectionViewCell?.alpha = 1
+        autoreleasepool {
+            guard let collectionView = self.initialSourceView?
+                    .parentView(of: UICollectionView.self)
+            else {
+                return
+            }
+            
+            // Show all collection view cells again.
+            let numberOfRows = collectionView.numberOfItems(inSection: 0)
+            for rowIndex in 0..<numberOfRows {
+                let indexPath = IndexPath(row: rowIndex, section: 0)
+                let collectionViewCell = collectionView.cellForItem(
+                    at: indexPath)?.contentView
+                
+                DispatchQueue.main.async {
+                    collectionViewCell?.alpha = 1
+                }
+            }
         }
     }
     
     public func hideCurrentParentScrollViewCell() {
-        guard let collectionView = self.initialSourceView?
-                .parentView(of: UICollectionView.self)
-        else {
-            return
-        }
         
-        // Hide the currently displayed collection view cell
-        // (used for the dismiss animation).
-        let rowIndex = self.indexOffset + self.currentIndex
-        let indexPath = IndexPath(row: rowIndex, section: 0)
-        let collectionViewCell = collectionView.cellForItem(
-            at: indexPath)?.contentView
-        collectionViewCell?.alpha = 0
+        autoreleasepool {
+            guard let collectionView = self.initialSourceView?
+                    .parentView(of: UICollectionView.self)
+            else {
+                return
+            }
+            
+            // Hide the currently displayed collection view cell
+            // (used for the dismiss animation).
+            let rowIndex = self.indexOffset + self.currentIndex
+            let indexPath = IndexPath(row: rowIndex, section: 0)
+            let collectionViewCell = collectionView.cellForItem(
+                at: indexPath)?.contentView
+            
+            DispatchQueue.main.async {
+                collectionViewCell?.alpha = 0
+            }
+        }
     }
 }
 
