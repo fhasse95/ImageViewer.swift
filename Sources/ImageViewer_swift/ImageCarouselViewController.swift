@@ -401,8 +401,8 @@ extension ImageCarouselViewController: UIPageViewControllerDelegate {
         
         // Only scroll when the cell is not fully visible (e.g. cut off).
         let completelyVisible =
-        collectionView.bounds.contains(
-            collectionViewCell.frame)
+            collectionView.bounds.contains(
+                collectionViewCell.frame)
         
         let shouldScroll = !completelyVisible
         if shouldScroll || !onlyScrollIfNecessary {
