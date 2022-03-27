@@ -107,7 +107,7 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         self.imageDatasource = imageDataSource
         let pageOptions = [UIPageViewController.OptionsKey.interPageSpacing: 20]
         super.init(
-            transitionStyle: .pageCurl,
+            transitionStyle: .scroll,
             navigationOrientation: .horizontal,
             options: pageOptions)
         
