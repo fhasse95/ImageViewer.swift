@@ -105,8 +105,6 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
     
     private let imageViewerPresentationDelegate = ImageViewerTransitionPresentationManager()
     
-    private var imageViewerControllers = [ImageViewerController]()
-    
     public init(
         sourceView:UIImageView,
         imageDataSource: ImageDataSource?,
@@ -127,16 +125,6 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         transitioningDelegate = imageViewerPresentationDelegate
         modalPresentationStyle = .custom
         modalPresentationCapturesStatusBarAppearance = true
-        
-        if let imageDatasource = self.imageDatasource {
-            let numberOfImages = imageDatasource.numberOfImages() ?? 0
-            for index in 0..<numberOfImages {
-                let viewController = ImageViewerController.init(
-                    index: index,
-                    imageItem: imageDatasource.imageItem(at: index))
-                self.imageViewerControllers.append(viewController)
-            }
-        }
     }
     
     required init?(coder: NSCoder) {
@@ -266,7 +254,9 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         delegate = self
         
         if let imageDatasource = imageDatasource {
-            let initialVC = self.imageViewerControllers[self.initialIndex]
+            let initialVC:ImageViewerController = .init(
+                index: initialIndex,
+                imageItem: imageDatasource.imageItem(at: initialIndex))
             setViewControllers([initialVC], direction: .forward, animated: true)
         }
     }
@@ -348,7 +338,9 @@ extension ImageCarouselViewController:UIPageViewControllerDataSource {
         guard vc.index > 0 else { return nil }
  
         let newIndex = vc.index - 1
-        return self.imageViewerControllers[newIndex]
+        return ImageViewerController.init(
+            index: newIndex,
+            imageItem: imageDatasource.imageItem(at: newIndex))
     }
     
     public func pageViewController(
@@ -360,7 +352,9 @@ extension ImageCarouselViewController:UIPageViewControllerDataSource {
         guard vc.index <= (imageDatasource.numberOfImages() - 2) else { return nil }
         
         let newIndex = vc.index + 1
-        return self.imageViewerControllers[newIndex]
+        return ImageViewerController.init(
+            index: newIndex,
+            imageItem: imageDatasource.imageItem(at: newIndex))
     }
 }
 
