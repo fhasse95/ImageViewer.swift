@@ -59,6 +59,7 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         return _navBar
     }()
     
+    private var deleteBarButtonItem: UIBarButtonItem?
     private(set) lazy var toolBar: UIToolbar = {
         let _toolBar = UIToolbar(frame: .zero)
         _toolBar.isTranslucent = true
@@ -202,6 +203,11 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         toolBar.trailingAnchor.constraint(
             equalTo: self.view.safeAreaLayoutGuide.trailingAnchor)
             .isActive = true
+        
+        // Add the delete bar button item if necessary.
+        if let deleteBarButtonItem = deleteBarButtonItem {
+            toolBar.items?.append(deleteBarButtonItem)
+        }
     }
     
     private func addBackgroundView() {
@@ -216,12 +222,11 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         options.forEach {
             switch $0 {
             case .deleteButton(let onTap):
-                let deleteBarButtonItem = UIBarButtonItem(
+                self.deleteBarButtonItem = UIBarButtonItem(
                     barButtonSystemItem: .trash,
                     target: self,
                     action: #selector(deleteImage(_:)))
-                deleteBarButtonItem.tintColor = .systemRed
-                toolBar.items?.append(deleteBarButtonItem)
+                self.deleteBarButtonItem?.tintColor = .systemRed
                 onDeleteButtonTapped = onTap
             case .indexOffset(let indexOffset):
                 self.indexOffset = indexOffset
