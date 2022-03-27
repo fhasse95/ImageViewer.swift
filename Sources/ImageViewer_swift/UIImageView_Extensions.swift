@@ -162,12 +162,13 @@ extension UIImageView {
         }
     }
     
-    public func showImageViewer(transitionType: ImageViewerTransitionType) {
+    public func showImageViewer(
+        transitionSourceRect: CGRect) {
         if let tapWithDataRecognizer = self.gestureRecognizers?
             .first(where: { $0 is TapWithDataRecognizer })
             as? TapWithDataRecognizer {
             
-            func removeAllTransitionTypeOptions() {
+            func removeAllTemporaryOptions() {
                 for (index, option) in tapWithDataRecognizer.options.enumerated() {
                     guard tapWithDataRecognizer.options.count > index
                     else {
@@ -175,7 +176,7 @@ extension UIImageView {
                     }
                     
                     switch option {
-                    case .transitionType(_):
+                    case .transitionSourceRect(_):
                         tapWithDataRecognizer.options.remove(at: index)
                     default:
                         break
@@ -183,11 +184,11 @@ extension UIImageView {
                 }
             }
             
-            removeAllTransitionTypeOptions()
-            tapWithDataRecognizer.options.append(.transitionType(transitionType))
+            removeAllTemporaryOptions()
+            tapWithDataRecognizer.options.append(.transitionSourceRect(transitionSourceRect))
             
             self.showImageViewer(tapWithDataRecognizer)
-            removeAllTransitionTypeOptions()
+            removeAllTemporaryOptions()
         }
     }
     

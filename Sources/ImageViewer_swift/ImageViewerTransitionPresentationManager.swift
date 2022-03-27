@@ -16,8 +16,8 @@ protocol ImageViewerTransitionViewControllerConvertible {
     // The final view
     var targetView: UIImageView? { get }
     
-    // The transition type.
-    var transitionType: ImageViewerTransitionType { get set }
+    // The transition source rect.
+    var transitionSourceRect: CGRect? { get set }
 }
 
 final class ImageViewerTransitionPresentationAnimator:NSObject {
@@ -106,10 +106,9 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
         targetView.alpha = 0.0
         
         var sourceFrame: CGRect = .zero
-        switch transitionVC.transitionType {
-        case .none:
-            sourceFrame = UIScreen.main.bounds
-        case .move:
+        if let customSourceFrame = transitionVC.transitionSourceRect {
+            sourceFrame = customSourceFrame
+        } else {
             sourceFrame = sourceView.frameRelativeToWindow()
         }
         
@@ -120,7 +119,7 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
         transitionView.addSubview(dummyImageView)
         
         UIView.animate(withDuration: duration, animations: {
-            dummyImageView.frame = UIScreen.main.bounds
+            dummyImageView.frame = transitionVC.view.bounds
             controller.view.alpha = 1.0
         }) { finished in
             dummyImageView.removeFromSuperview()
@@ -149,7 +148,7 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
         let targetView = transitionVC.targetView
         
         let dummyImageView = createDummyImageView(
-            frame: targetView?.frameRelativeToWindow() ?? UIScreen.main.bounds,
+            frame: targetView?.frameRelativeToWindow() ?? transitionVC.view.bounds,
             image: targetView?.image)
         transitionView.addSubview(dummyImageView)
         targetView?.isHidden = true
@@ -189,6 +188,7 @@ final class ImageViewerTransitionPresentationManager: NSObject {
 
 // MARK: - UIViewControllerTransitioningDelegate
 extension ImageViewerTransitionPresentationManager: UIViewControllerTransitioningDelegate {
+    
     func presentationController(
         forPresented presented: UIViewController,
         presenting: UIViewController?,
@@ -205,14 +205,15 @@ extension ImageViewerTransitionPresentationManager: UIViewControllerTransitionin
         presenting: UIViewController,
         source: UIViewController
     ) -> UIViewControllerAnimatedTransitioning? {
- 
-        return ImageViewerTransitionPresentationAnimator(isPresenting: true)
+        return ImageViewerTransitionPresentationAnimator(
+            isPresenting: true)
     }
     
     func animationController(
         forDismissed dismissed: UIViewController
     ) -> UIViewControllerAnimatedTransitioning? {
-        return ImageViewerTransitionPresentationAnimator(isPresenting: false)
+        return ImageViewerTransitionPresentationAnimator(
+            isPresenting: false)
     }
 }
 

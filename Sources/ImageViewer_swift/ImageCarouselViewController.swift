@@ -7,24 +7,13 @@ public protocol ImageDataSource:class {
 
 public class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionViewControllerConvertible {
     
-    var transitionType: ImageViewerTransitionType = .move
+    var transitionSourceRect: CGRect? = nil
     
     var hideControls: Bool = false {
         didSet {
-            
-            let navBarOffset = self.navBar.frame.height + self.view.safeAreaInsets.top
-            let navBarTransform = self.hideControls ?
-                self.navBar.transform.translatedBy(x: 0.0, y: -navBarOffset) :
-                self.navBar.transform.translatedBy(x: 0.0, y: navBarOffset)
-            
-            let toolBarOffset = self.toolBar.frame.height + self.view.safeAreaInsets.bottom
-            let toolBarTransform = self.hideControls ?
-                self.toolBar.transform.translatedBy(x: 0.0, y: toolBarOffset) :
-                self.toolBar.transform.translatedBy(x: 0.0, y: -toolBarOffset)
-            
             UIView.animate(withDuration: UINavigationController.hideShowBarDuration) {
-                self.navBar.transform = navBarTransform
-                self.toolBar.transform = toolBarTransform
+                self.navBar.alpha = self.hideControls ? 0 : 1
+                self.toolBar.alpha = self.hideControls ? 0 : 1
                 self.setNeedsStatusBarAppearanceUpdate()
             }
         }
@@ -118,7 +107,7 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         self.imageDatasource = imageDataSource
         let pageOptions = [UIPageViewController.OptionsKey.interPageSpacing: 20]
         super.init(
-            transitionStyle: .scroll,
+            transitionStyle: .pageCurl,
             navigationOrientation: .horizontal,
             options: pageOptions)
         
@@ -236,8 +225,8 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
                 onDeleteButtonTapped = onTap
             case .indexOffset(let indexOffset):
                 self.indexOffset = indexOffset
-            case .transitionType(let type):
-                self.transitionType = type
+            case .transitionSourceRect(let sourceRect):
+                self.transitionSourceRect = sourceRect
             }
         }
     }
@@ -245,10 +234,12 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
     override public func viewDidLoad() {
         super.viewDidLoad()
         
-        addBackgroundView()
-        addNavBar()
-        addToolBar()
-        applyOptions()
+        self.applyOptions()
+        DispatchQueue.main.async {
+            self.addBackgroundView()
+            self.addNavBar()
+            self.addToolBar()
+        }
         
         dataSource = self
         delegate = self
@@ -392,77 +383,71 @@ extension ImageCarouselViewController: UIPageViewControllerDelegate {
     public func scrollParentScrollViewToCurrentItem(
         onlyScrollIfNecessary: Bool = true) {
         
-        autoreleasepool {
-            let rowIndex = self.indexOffset + self.currentIndex
-            let indexPath = IndexPath(row: rowIndex, section: 0)
-            
-            guard let collectionView = self.initialSourceView?
-                    .parentView(of: UICollectionView.self),
-                  let collectionViewCell = collectionView.cellForItem(
-                    at: indexPath)
-            else {
-                return
-            }
-            
-            // Only scroll when the cell is not fully visible (e.g. cut off).
-            let completelyVisible =
-            collectionView.bounds.contains(
-                collectionViewCell.frame)
-            
-            let shouldScroll = !completelyVisible
-            if shouldScroll || !onlyScrollIfNecessary {
-                DispatchQueue.main.async {
-                    collectionView.scrollToItem(
-                        at: indexPath,
-                        at: .left,
-                        animated: false)
-                }
+        let rowIndex = self.indexOffset + self.currentIndex
+        let indexPath = IndexPath(row: rowIndex, section: 0)
+        
+        guard let collectionView = self.initialSourceView?
+                .parentView(of: UICollectionView.self),
+              let collectionViewCell = collectionView.cellForItem(
+                at: indexPath)
+        else {
+            return
+        }
+        
+        // Only scroll when the cell is not fully visible (e.g. cut off).
+        let completelyVisible =
+        collectionView.bounds.contains(
+            collectionViewCell.frame)
+        
+        let shouldScroll = !completelyVisible
+        if shouldScroll || !onlyScrollIfNecessary {
+            DispatchQueue.main.async {
+                collectionView.scrollToItem(
+                    at: indexPath,
+                    at: .left,
+                    animated: false)
             }
         }
     }
     
     public func resetParentScrollViewCellVisibility() {
         
-        autoreleasepool {
-            guard let collectionView = self.initialSourceView?
-                    .parentView(of: UICollectionView.self)
-            else {
-                return
-            }
+        guard let collectionView = self.initialSourceView?
+                .parentView(of: UICollectionView.self)
+        else {
+            return
+        }
+        
+        // Show all collection view cells again.
+        let numberOfRows = collectionView.numberOfItems(inSection: 0)
+        for rowIndex in 0..<numberOfRows {
+            let indexPath = IndexPath(row: rowIndex, section: 0)
+            let collectionViewCell = collectionView.cellForItem(
+                at: indexPath)?.contentView
             
-            // Show all collection view cells again.
-            let numberOfRows = collectionView.numberOfItems(inSection: 0)
-            for rowIndex in 0..<numberOfRows {
-                let indexPath = IndexPath(row: rowIndex, section: 0)
-                let collectionViewCell = collectionView.cellForItem(
-                    at: indexPath)?.contentView
-                
-                DispatchQueue.main.async {
-                    collectionViewCell?.alpha = 1
-                }
+            DispatchQueue.main.async {
+                collectionViewCell?.alpha = 1
             }
         }
     }
     
     public func hideCurrentParentScrollViewCell() {
         
-        autoreleasepool {
-            guard let collectionView = self.initialSourceView?
-                    .parentView(of: UICollectionView.self)
-            else {
-                return
-            }
-            
-            // Hide the currently displayed collection view cell
-            // (used for the dismiss animation).
-            let rowIndex = self.indexOffset + self.currentIndex
-            let indexPath = IndexPath(row: rowIndex, section: 0)
-            let collectionViewCell = collectionView.cellForItem(
-                at: indexPath)?.contentView
-            
-            DispatchQueue.main.async {
-                collectionViewCell?.alpha = 0
-            }
+        guard let collectionView = self.initialSourceView?
+                .parentView(of: UICollectionView.self)
+        else {
+            return
+        }
+        
+        // Hide the currently displayed collection view cell
+        // (used for the dismiss animation).
+        let rowIndex = self.indexOffset + self.currentIndex
+        let indexPath = IndexPath(row: rowIndex, section: 0)
+        let collectionViewCell = collectionView.cellForItem(
+            at: indexPath)?.contentView
+        
+        DispatchQueue.main.async {
+            collectionViewCell?.alpha = 0
         }
     }
 }
