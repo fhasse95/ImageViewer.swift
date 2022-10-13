@@ -163,7 +163,7 @@ extension UIImageView {
     }
     
     public func showImageViewer(
-        transitionSourceRect: CGRect) {
+        transitionSourceRect: CGRect = .zero) {
         if let tapWithDataRecognizer = self.gestureRecognizers?
             .first(where: { $0 is TapWithDataRecognizer })
             as? TapWithDataRecognizer {
