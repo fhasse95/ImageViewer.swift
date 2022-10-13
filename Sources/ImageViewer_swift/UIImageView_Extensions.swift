@@ -203,6 +203,8 @@ extension UIImageView {
             initialIndex: sender.initialIndex)
         
         let presentFromVC = sender.from ?? vc
-        presentFromVC?.present(imageCarousel, animated: true)
+        presentFromVC?.present(imageCarousel, animated: true, completion: {
+            imageCarousel.hideCurrentParentScrollViewCell()
+        })
     }
 }
