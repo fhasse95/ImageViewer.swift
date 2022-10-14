@@ -188,10 +188,10 @@ extension UIImageView {
             if let transitionSourceRect = transitionSourceRect {
                 removeAllTemporaryOptions()
                 tapWithDataRecognizer.options.append(.transitionSourceRect(transitionSourceRect))
-                removeAllTemporaryOptions()
             }
             
             self.showImageViewer(tapWithDataRecognizer)
+            removeAllTemporaryOptions()
         }
     }
     
