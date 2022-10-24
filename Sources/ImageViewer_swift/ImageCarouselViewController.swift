@@ -14,6 +14,7 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
             UIView.animate(withDuration: UINavigationController.hideShowBarDuration) {
                 self.navBar.alpha = self.hideControls ? 0 : 1
                 self.toolBar.alpha = self.hideControls ? 0 : 1
+                self.updateBackgroundView()
                 self.setNeedsStatusBarAppearanceUpdate()
             }
         }
@@ -125,11 +126,13 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         _ previousTraitCollection: UITraitCollection?) {
             
         super.traitCollectionDidChange(previousTraitCollection)
-        
-        switch self.traitCollection.userInterfaceStyle {
-        case .dark:
+        self.updateBackgroundView()
+    }
+    
+    private func updateBackgroundView() {
+        if self.hideControls || self.traitCollection.userInterfaceStyle == .dark {
             self.backgroundView?.backgroundColor = .black
-        default:
+        } else {
             self.backgroundView?.backgroundColor = .white
         }
     }
