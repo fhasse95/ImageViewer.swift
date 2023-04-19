@@ -273,9 +273,6 @@ extension ImageViewerController {
     }
     
     func updateConstraintsForSize(_ size: CGSize) {
-        
-        imageView.sizeToFit()
-        
         let yOffset = max(0, (size.height - imageView.frame.height) / 2)
         top.constant = yOffset
         bottom.constant = yOffset
@@ -284,8 +281,7 @@ extension ImageViewerController {
         leading.constant = xOffset
         trailing.constant = xOffset
         view.layoutIfNeeded()
-    }
-    
+    }    
 }
 
 // MARK: Animation Related stuff

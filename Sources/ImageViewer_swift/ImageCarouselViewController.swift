@@ -1,6 +1,6 @@
 import UIKit
 
-public protocol ImageDataSource:class {
+public protocol ImageDataSource: AnyObject {
     func numberOfImages() -> Int
     func imageItem(at index:Int) -> ImageItem
 }
@@ -49,6 +49,7 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
     }
     var indexOffset = 0
     
+    var imageContentMode: UIView.ContentMode = .scaleAspectFill
     var options:[ImageViewerOption] = []
     
     private var onDeleteButtonTapped:((ImageCarouselViewController) -> Void)?
@@ -94,7 +95,7 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
     
     private(set) lazy var navItem = UINavigationItem()
     
-    private let imageViewerPresentationDelegate = ImageViewerTransitionPresentationManager()
+    private let imageViewerPresentationDelegate: ImageViewerTransitionPresentationManager
     
     public init(
         sourceView:UIImageView,
@@ -108,6 +109,19 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         self.options = options
         self.imageDatasource = imageDataSource
         let pageOptions = [UIPageViewController.OptionsKey.interPageSpacing: 20]
+        
+        var _imageContentMode = imageContentMode
+        options.forEach {
+            switch $0 {
+            case .contentMode(let contentMode):
+                _imageContentMode = contentMode
+            default:
+                break
+            }
+        }
+        imageContentMode = _imageContentMode
+        
+        self.imageViewerPresentationDelegate = ImageViewerTransitionPresentationManager(imageContentMode: imageContentMode)
         super.init(
             transitionStyle: .scroll,
             navigationOrientation: .horizontal,
@@ -230,11 +244,31 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
                     target: self,
                     action: #selector(deleteImage(_:)))
                 self.deleteBarButtonItem?.tintColor = .systemRed
-                onDeleteButtonTapped = onTap
+                self.onDeleteButtonTapped = onTap
             case .indexOffset(let indexOffset):
                 self.indexOffset = indexOffset
             case .transitionSourceRect(let sourceRect):
                 self.transitionSourceRect = sourceRect
+            case .theme(let theme):
+                self.theme = theme
+            case .contentMode(let contentMode):
+                self.imageContentMode = contentMode
+            case .closeIcon(let icon):
+                self.navItem.leftBarButtonItem?.image = icon
+            case .rightNavItemTitle(let title, let onTap):
+                self.navItem.rightBarButtonItem = UIBarButtonItem(
+                    title: title,
+                    style: .plain,
+                    target: self,
+                    action: #selector(diTapRightNavBarItem(_:)))
+                self.onRightNavBarTapped = onTap
+            case .rightNavItemIcon(let icon, let onTap):
+                self.navItem.rightBarButtonItem = UIBarButtonItem(
+                    image: icon,
+                    style: .plain,
+                    target: self,
+                    action: #selector(diTapRightNavBarItem(_:)))
+                self.onRightNavBarTapped = onTap
             }
         }
     }
@@ -301,7 +335,7 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
     
     @objc
     private func dismiss(_ sender:UIBarButtonItem) {
-        dismissView(completion: nil)
+        self.dismiss(animated: true, completion: nil)
     }
     
     public func dismissView(completion: (() -> Void)? = nil) {
