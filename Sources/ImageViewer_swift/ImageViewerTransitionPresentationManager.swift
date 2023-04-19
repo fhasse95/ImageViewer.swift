@@ -109,12 +109,20 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
         transitionView.addSubview(controller.view)
         transitionVC.targetView?.alpha = 0.0
         transitionVC.targetView?.tintColor = sourceView.tintColor
+            
+        var sourceFrame: CGRect = .zero
+        if let customSourceFrame = transitionVC.transitionSourceRect {
+            sourceFrame = customSourceFrame
+        } else {
+            sourceFrame = sourceView.frameRelativeToWindow()
+        }
         
         let dummyImageView = createDummyImageView(
-            frame: sourceView.frameRelativeToWindow(),
-            image: sourceView.image)
+            frame: sourceFrame,
+            image: transitionVC.sourceView?.image)
         dummyImageView.contentMode = .scaleAspectFit
         dummyImageView.tintColor = sourceView.tintColor
+        dummyImageView.layer.cornerRadius = sourceView.layer.cornerRadius
         transitionView.addSubview(dummyImageView)
         
         UIView.animate(withDuration: duration, animations: {

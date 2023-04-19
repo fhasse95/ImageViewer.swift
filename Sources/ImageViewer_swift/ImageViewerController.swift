@@ -51,6 +51,7 @@ UIGestureRecognizerDelegate {
     
     private var lastLocation:CGPoint = .zero
     private var isAnimating:Bool = false
+    private var controlsWereVisible:Bool = false
     private var maxZoomScale:CGFloat = 1.0
     
     init(
@@ -174,6 +175,7 @@ UIGestureRecognizerDelegate {
         let container:UIView! = imageView
         if gestureRecognizer.state == .began {
             lastLocation = container.center
+            controlsWereVisible = navBar?.alpha ?? 0 > 0
         }
         
         if gestureRecognizer.state != .cancelled {
@@ -188,20 +190,17 @@ UIGestureRecognizerDelegate {
         let alpha = 1.0 - abs(diffY/view.center.y)
         backgroundView?.alpha = alpha
         
-        if navBar?.alpha ?? 0 > 0 {
+        if controlsWereVisible {
             navBar?.alpha = alpha
             toolBar?.alpha = alpha
         }
         
-        switch gestureRecognizer.state {
-        case .ended:
+        if gestureRecognizer.state == .ended {
             if abs(diffY) > 60 {
                 dismiss(animated: true)
             } else {
                 executeCancelAnimation()
             }
-        default:
-            break
         }
     }
     
@@ -273,6 +272,8 @@ extension ImageViewerController {
     }
     
     func updateConstraintsForSize(_ size: CGSize) {
+        imageView.sizeToFit()
+        
         let yOffset = max(0, (size.height - imageView.frame.height) / 2)
         top.constant = yOffset
         bottom.constant = yOffset

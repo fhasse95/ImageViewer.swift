@@ -249,26 +249,12 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
                 self.indexOffset = indexOffset
             case .transitionSourceRect(let sourceRect):
                 self.transitionSourceRect = sourceRect
-            case .theme(let theme):
-                self.theme = theme
             case .contentMode(let contentMode):
                 self.imageContentMode = contentMode
             case .closeIcon(let icon):
                 self.navItem.leftBarButtonItem?.image = icon
-            case .rightNavItemTitle(let title, let onTap):
-                self.navItem.rightBarButtonItem = UIBarButtonItem(
-                    title: title,
-                    style: .plain,
-                    target: self,
-                    action: #selector(diTapRightNavBarItem(_:)))
-                self.onRightNavBarTapped = onTap
-            case .rightNavItemIcon(let icon, let onTap):
-                self.navItem.rightBarButtonItem = UIBarButtonItem(
-                    image: icon,
-                    style: .plain,
-                    target: self,
-                    action: #selector(diTapRightNavBarItem(_:)))
-                self.onRightNavBarTapped = onTap
+            default:
+                break
             }
         }
     }
@@ -320,7 +306,7 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
             activityItems: [imageToShare],
             applicationActivities: nil)
         activityViewController.popoverPresentationController?
-            .sourceView = self.view
+            .barButtonItem = sender
         
         self.present(
             activityViewController,
