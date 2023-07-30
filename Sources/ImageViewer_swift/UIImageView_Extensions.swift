@@ -218,6 +218,7 @@ extension UIImageView {
         
         let presentFromVC = sender.from ?? vc
         presentFromVC?.present(imageCarousel, animated: true, completion: {
+            imageCarousel.hideControls = false
             imageCarousel.hideCurrentParentScrollViewCell()
         })
     }

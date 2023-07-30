@@ -39,7 +39,7 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         return vc.imageView
     }
     
-    weak var imageDatasource:ImageDataSource?
+    weak var imageDatasource: ImageDataSource?
     
     var initialIndex = 0
     public var currentIndex = 0 {
@@ -57,6 +57,7 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
     private(set) lazy var navBar: UINavigationBar = {
         let _navBar = UINavigationBar(frame: .zero)
         _navBar.isTranslucent = true
+        _navBar.alpha = 0
         _navBar.delegate = self
         return _navBar
     }()
@@ -65,6 +66,7 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
     private(set) lazy var toolBar: UIToolbar = {
         let _toolBar = UIToolbar(frame: .zero)
         _toolBar.isTranslucent = true
+        _toolBar.alpha = 0
         return _toolBar
     }()
     

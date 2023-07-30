@@ -23,11 +23,11 @@ UIGestureRecognizerDelegate {
         return _parent
     }
 
-    var navBar:UINavigationBar? {
+    var navBar: UINavigationBar? {
         return self.imageCarousel?.navBar
     }
     
-    var toolBar:UIToolbar? {
+    var toolBar: UIToolbar? {
         return self.imageCarousel?.toolBar
     }
     
@@ -112,8 +112,8 @@ UIGestureRecognizerDelegate {
         addGestureRecognizers()
     }
     
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
         
         DispatchQueue.main.async {
             switch self.imageItem {
@@ -122,6 +122,16 @@ UIGestureRecognizerDelegate {
             default:
                 break
             }
+            
+            self.layout()
+        }
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        DispatchQueue.main.async {
+            self.layout()
         }
     }
     
@@ -131,8 +141,8 @@ UIGestureRecognizerDelegate {
     }
     
     private func layout() {
-        updateConstraintsForSize(view.bounds.size)
-        updateMinMaxZoomScaleForSize(view.bounds.size)
+        self.updateConstraintsForSize(self.view.bounds.size)
+        self.updateMinMaxZoomScaleForSize(self.view.bounds.size)
     }
     
     // MARK: Add Gesture Recognizers
@@ -244,8 +254,8 @@ extension ImageViewerController {
         }
         
         let minScale = min(
-            size.width/targetSize.width,
-            size.height/targetSize.height)
+            size.width / targetSize.width,
+            size.height / targetSize.height)
         let maxScale = max(
             (size.width + 1.0) / targetSize.width,
             (size.height + 1.0) / targetSize.height)
@@ -312,4 +322,3 @@ extension ImageViewerController:UIScrollViewDelegate {
         updateConstraintsForSize(view.bounds.size)
     }
 }
-
