@@ -116,13 +116,6 @@ UIGestureRecognizerDelegate {
         super.viewWillAppear(animated)
         
         DispatchQueue.main.async {
-            switch self.imageItem {
-            case .image(let image, let thumbnailImage):
-                self.imageView.image = image
-            default:
-                break
-            }
-            
             self.layout()
         }
     }
@@ -131,6 +124,13 @@ UIGestureRecognizerDelegate {
         super.viewDidAppear(animated)
         
         DispatchQueue.main.async {
+            switch self.imageItem {
+            case .image(let image, let thumbnailImage):
+                self.imageView.image = image
+            default:
+                break
+            }
+            
             self.layout()
         }
     }
